@@ -16,6 +16,9 @@
  * Sync handlers can simply ignore the extra argument.
  */
 
+(() => {
+"use strict";
+
 const MODULE_ID = "pf1-new-script-hooks";
 
 Hooks.once("ready", () => {
@@ -61,3 +64,5 @@ async function createAttackDialogWrapper(wrapped, ...args) {
 
   return form;
 }
+
+})();

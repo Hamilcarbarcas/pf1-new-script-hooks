@@ -10,6 +10,9 @@
  * Pre-Use appear at the top of the script calls UI for clarity.
  */
 
+(() => {
+"use strict";
+
 const MODULE_ID = "pf1-new-script-hooks";
 const CATEGORY_PRE_ACTIVATE = "preActivate";
 const CATEGORY_PRE_USE = "preUse";
@@ -109,3 +112,5 @@ async function prepareScriptCallsWrapper(wrapped, ...args) {
 
   context.scriptCalls = reordered;
 }
+
+})();
