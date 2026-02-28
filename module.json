@@ -1,0 +1,34 @@
+{
+  "id": "pf1-new-script-hooks",
+  "title": "PF1 New Script Hooks",
+  "description": "<p>Adds additional hook points and script call categories for PF1 item actions. Provides pf1PreAttackDialog and pf1PostAttackDialog hooks, plus Pre-Activate and Pre-Use script call categories.</p>",
+  "authors": [
+    {
+      "name": "Patrick",
+      "flags": {}
+    }
+  ],
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf1",
+        "type": "system"
+      }
+    ],
+    "requires": [
+      {
+        "id": "lib-wrapper",
+        "type": "module"
+      }
+    ]
+  },
+  "scripts": [
+    "scripts/dialog-hooks.mjs",
+    "scripts/script-calls.mjs"
+  ]
+}
