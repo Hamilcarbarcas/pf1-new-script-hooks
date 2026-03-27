@@ -72,19 +72,28 @@ Hooks.once("ready", () => {
 // ---- Hook handlers ---- //
 
 Hooks.on("pf1PreAttackDialog", (actionUse, promises) => {
+  console.error(`[NSH-DEBUG] pf1PreAttackDialog handler | item="${actionUse?.item?.name}" | hasItem=${!!actionUse?.item}`);
   if (!actionUse?.item) return;
+  const shared = actionUse.shared ?? {};
+  shared.actionUse = actionUse;
+  console.error(`[NSH-DEBUG] Calling executeScriptCalls("${CATEGORY_PRE_ACTIVATE}") on "${actionUse.item.name}"`);
   const p = actionUse.item
-    .executeScriptCalls(CATEGORY_PRE_ACTIVATE, {}, actionUse.shared ?? {})
+    .executeScriptCalls(CATEGORY_PRE_ACTIVATE, {}, shared)
+    .then(() => console.error(`[NSH-DEBUG] executeScriptCalls("${CATEGORY_PRE_ACTIVATE}") completed OK`))
     .catch((err) => console.error(`${MODULE_ID} | Pre-Activate script call execution failed:`, err));
   if (promises) promises.push(p);
 });
 
 Hooks.on("pf1PostAttackDialog", (actionUse, formData, promises) => {
+  console.error(`[NSH-DEBUG] pf1PostAttackDialog handler | item="${actionUse?.item?.name}" | hasFormData=${!!formData}`);
   if (!actionUse?.item) return;
   const shared = actionUse.shared ?? {};
+  shared.actionUse = actionUse;
   if (formData) shared.formData = formData;
+  console.error(`[NSH-DEBUG] Calling executeScriptCalls("${CATEGORY_PRE_USE}") on "${actionUse.item.name}"`);
   const p = actionUse.item
     .executeScriptCalls(CATEGORY_PRE_USE, { formData }, shared)
+    .then(() => console.error(`[NSH-DEBUG] executeScriptCalls("${CATEGORY_PRE_USE}") completed OK`))
     .catch((err) => console.error(`${MODULE_ID} | Pre-Use script call execution failed:`, err));
   if (promises) promises.push(p);
 });

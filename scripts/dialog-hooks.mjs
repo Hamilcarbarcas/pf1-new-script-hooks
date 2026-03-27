@@ -46,6 +46,7 @@ Hooks.once("ready", () => {
 });
 
 async function createAttackDialogWrapper(wrapped, ...args) {
+  console.error(`[NSH-DEBUG] createAttackDialogWrapper ENTERED | item="${this?.item?.name}"`);
   const shared = this.shared;
   const prePromises = [];
   try {
@@ -53,6 +54,7 @@ async function createAttackDialogWrapper(wrapped, ...args) {
   } catch (err) {
     console.error(`${MODULE_ID} | Error in pf1PreAttackDialog hook:`, err);
   }
+  console.error(`[NSH-DEBUG] pf1PreAttackDialog fired | ${prePromises.length} promises collected`);
   if (prePromises.length) {
     await Promise.all(prePromises);
   }
@@ -78,9 +80,12 @@ async function createAttackDialogWrapper(wrapped, ...args) {
     } catch (err) {
       console.error(`${MODULE_ID} | Error in pf1PostAttackDialog hook:`, err);
     }
+    console.error(`[NSH-DEBUG] pf1PostAttackDialog fired | ${postPromises.length} promises collected`);
     if (postPromises.length) {
       await Promise.all(postPromises);
     }
+  } else {
+    console.error(`[NSH-DEBUG] No form returned from dialog — post-dialog hooks SKIPPED`);
   }
 
   return form;
