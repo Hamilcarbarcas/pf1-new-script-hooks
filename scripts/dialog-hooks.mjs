@@ -14,6 +14,14 @@
  * complete before the form data is consumed by alterRollData or other modules.
  *
  * Sync handlers can simply ignore the extra argument.
+ *
+ * Pre-Activate Script Call API (via shared object):
+ *  - shared.reject = true     Cancels the action entirely. The attack dialog
+ *                              is never shown, createAttackDialog returns null,
+ *                              and ActionUse.process() aborts.
+ *  - shared.skipDialog = true  Skips the attack dialog but continues the action.
+ *                              createAttackDialog returns an empty form object
+ *                              and ActionUse.process() proceeds with defaults.
  */
 
 (() => {
@@ -31,13 +39,14 @@ Hooks.once("ready", () => {
     MODULE_ID,
     "pf1.actionUse.ActionUse.prototype.createAttackDialog",
     createAttackDialogWrapper,
-    "WRAPPER"
+    "MIXED"
   );
 
   console.log(`${MODULE_ID} | Dialog hooks wrapper registered.`);
 });
 
 async function createAttackDialogWrapper(wrapped, ...args) {
+  const shared = this.shared;
   const prePromises = [];
   try {
     Hooks.callAll("pf1PreAttackDialog", this, prePromises);
@@ -46,6 +55,18 @@ async function createAttackDialogWrapper(wrapped, ...args) {
   }
   if (prePromises.length) {
     await Promise.all(prePromises);
+  }
+
+  // Cancel: preActivate script set shared.reject — abort without showing dialog
+  if (shared.reject) {
+    console.log(`${MODULE_ID} | Action cancelled by preActivate script call.`);
+    return null;
+  }
+
+  // Skip dialog: preActivate script set shared.skipDialog — continue with defaults
+  if (shared.skipDialog) {
+    console.log(`${MODULE_ID} | Attack dialog skipped by preActivate script call.`);
+    return {};
   }
 
   const form = await wrapped(...args);

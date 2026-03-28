@@ -73,8 +73,10 @@ Hooks.once("ready", () => {
 
 Hooks.on("pf1PreAttackDialog", (actionUse, promises) => {
   if (!actionUse?.item) return;
+  const shared = actionUse.shared ?? {};
+  shared.actionUse = actionUse;
   const p = actionUse.item
-    .executeScriptCalls(CATEGORY_PRE_ACTIVATE, {}, actionUse.shared ?? {})
+    .executeScriptCalls(CATEGORY_PRE_ACTIVATE, {}, shared)
     .catch((err) => console.error(`${MODULE_ID} | Pre-Activate script call execution failed:`, err));
   if (promises) promises.push(p);
 });
@@ -82,6 +84,7 @@ Hooks.on("pf1PreAttackDialog", (actionUse, promises) => {
 Hooks.on("pf1PostAttackDialog", (actionUse, formData, promises) => {
   if (!actionUse?.item) return;
   const shared = actionUse.shared ?? {};
+  shared.actionUse = actionUse;
   if (formData) shared.formData = formData;
   const p = actionUse.item
     .executeScriptCalls(CATEGORY_PRE_USE, { formData }, shared)
