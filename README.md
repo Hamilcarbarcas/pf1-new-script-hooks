@@ -7,6 +7,7 @@ A Foundry VTT module for the PF1 system that adds new hook points and script cal
 **Manifest URL:** `https://github.com/Hamilcarbarcas/pf1-new-script-hooks/releases/latest/download/module.json`
 
 ## Features
+![Example](assets/script-hooks-example.png)
 
 ### Dialog Hooks
 
