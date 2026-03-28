@@ -2,7 +2,7 @@
 
 A Foundry VTT module for the PF1 system that adds new hook points and script call categories around the attack dialog lifecycle.
 
-**Version:** 1.0.0  
+**Version:** 1.0.1
 **Foundry VTT Compatibility:** v13  
 **Manifest URL:** `https://github.com/Hamilcarbarcas/pf1-new-script-hooks/releases/latest/download/module.json`
 
