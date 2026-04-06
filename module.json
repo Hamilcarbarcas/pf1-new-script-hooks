@@ -29,7 +29,7 @@
       }
     ]
   },
-  "scripts": [
+  "esmodules": [
     "scripts/dialog-hooks.mjs",
     "scripts/script-calls.mjs"
   ]
