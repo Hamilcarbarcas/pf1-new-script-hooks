@@ -51,6 +51,36 @@ Hooks.on("pf1RegisterScriptCalls", (registry) => {
   } catch (err) {
     console.warn(`${MODULE_ID} | Pre-Use script call category already registered.`);
   }
+
+  try {
+    registry.register(MODULE_ID, "turnStart", {
+      itemTypes: DEFAULT_ITEM_TYPES,
+      name: "Turn Start",
+      info: "Runs at the start of this actor's turn in combat.",
+    });
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Turn Start script call category already registered.`);
+  }
+
+  try {
+    registry.register(MODULE_ID, "turnEnd", {
+      itemTypes: DEFAULT_ITEM_TYPES,
+      name: "Turn End",
+      info: "Runs at the end of this actor's turn in combat.",
+    });
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Turn End script call category already registered.`);
+  }
+
+  try {
+    registry.register(MODULE_ID, "preToggle", {
+      itemTypes: ["buff"],
+      name: "Pre-Toggle",
+      info: "Runs before a buff's active state changes. Set shared.reject = true to cancel the toggle.",
+    });
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Pre-Toggle script call category already registered.`);
+  }
 });
 
 // ---- UI ordering wrapper ---- //
