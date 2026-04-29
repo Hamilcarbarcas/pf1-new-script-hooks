@@ -131,16 +131,29 @@ async function prepareScriptCallsWrapper(wrapped, ...args) {
   if (!context?.scriptCalls) return;
 
   const originalOrder = Object.keys(context.scriptCalls);
-  const priority = [CATEGORY_PRE_ACTIVATE, CATEGORY_PRE_USE];
+  const pinnedTop = [CATEGORY_PRE_ACTIVATE, CATEGORY_PRE_USE];
   const reordered = {};
 
-  for (const key of priority) {
+  // Pinned to top
+  for (const key of pinnedTop) {
     if (context.scriptCalls[key]) reordered[key] = context.scriptCalls[key];
   }
 
+  // Remaining in original order; inject preToggle immediately before toggle
   for (const key of originalOrder) {
     if (reordered[key]) continue;
+    if (key === "preToggle") continue; // placed just before toggle below
+
+    if (key === "toggle" && context.scriptCalls["preToggle"]) {
+      reordered["preToggle"] = context.scriptCalls["preToggle"];
+    }
+
     reordered[key] = context.scriptCalls[key];
+  }
+
+  // Fallback: if toggle never appeared, append preToggle at end
+  if (!reordered["preToggle"] && context.scriptCalls["preToggle"]) {
+    reordered["preToggle"] = context.scriptCalls["preToggle"];
   }
 
   context.scriptCalls = reordered;
