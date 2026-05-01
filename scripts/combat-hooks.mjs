@@ -54,6 +54,7 @@ async function processTurnStartWrapper(wrapped, changed, context) {
   const extraParams = { combat, combatant, turn: this.turn, round: this.round };
 
   for (const item of actor.items) {
+    if (!item.isActive) continue;
     try {
       await item.executeScriptCalls(CATEGORY_TURN_START, extraParams, shared);
     } catch (err) {
@@ -76,6 +77,7 @@ async function processEndTurnWrapper(wrapped, originTime = {}, context = {}) {
   const extraParams = { combat, combatant, turn, round };
 
   for (const item of actor.items) {
+    if (!item.isActive) continue;
     try {
       await item.executeScriptCalls(CATEGORY_TURN_END, extraParams, shared);
     } catch (err) {
