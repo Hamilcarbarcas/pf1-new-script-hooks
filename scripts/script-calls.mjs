@@ -81,6 +81,16 @@ Hooks.on("pf1RegisterScriptCalls", (registry) => {
   } catch (err) {
     console.warn(`${MODULE_ID} | Pre-Toggle script call category already registered.`);
   }
+
+  try {
+    registry.register(MODULE_ID, "create", {
+      itemTypes: [...DEFAULT_ITEM_TYPES, "class", "race", "container"],
+      name: "Create",
+      info: "Runs when the item is added to an actor (e.g. dropped from a compendium).",
+    });
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Create script call category already registered.`);
+  }
 });
 
 // ---- UI ordering wrapper ---- //

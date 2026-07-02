@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.0] - 2026-07-02
+
+### Added
+- **Create** script call category: runs once when an item is added to an actor (e.g. dropped from a compendium). Fires on the dropper's client via Foundry's native `createItem` hook, for actor-embedded items only. Scripts receive the standard `item`, `actor`, `token` variables plus the creation `options` and `userId`. Items that arrive as part of a whole actor being created, imported, or duplicated are filtered out.
+
 ## [1.0.0] - 2026-02-28
 
 ### Added

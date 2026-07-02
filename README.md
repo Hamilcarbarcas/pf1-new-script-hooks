@@ -24,7 +24,7 @@ Both hooks pass a `promises` array as the last argument. Async handlers can push
 
 ### Script Call Categories
 
-All categories appear at the top of the script calls list on item sheets for easy access.
+All categories appear in the script calls list on item sheets for easy access.
 
 #### Pre-Activate (`preActivate`) — buff, feat, and all action item types
 Runs before the attack dialog opens. Use for setup logic that needs to happen before the user sees the dialog.
@@ -94,7 +94,25 @@ Runs before a buff's active state is written to the database — catching manual
 **`shared` API:**
 | Flag | Effect |
 |---|---|
-| `shared.reject = true` | Cancels the toggle. The buff's active state is not changed and the existing `toggle` script call never fires. |
+| `shared.reject = true` | Cancels the toggle. The buff's active state is not changed and any existing `toggle` script calls never fire. |
+
+---
+
+#### Create (`create`) — all item types
+Runs once when the item is embedded on an actor — dropped from a compendium or the sidebar, or added programmatically. Uses Foundry's native `createItem` hook. World/compendium-directory items are ignored; only actor-embedded items fire it.
+
+Fires on the client of the user who created the item (the dropper). The item's flags and data are fully readable at this point.
+
+**Directly available variables:**
+| Variable | Type | Description |
+|---|---|---|
+| `item` | `ItemPF` | The newly created item. |
+| `actor` | `ActorPF` | The actor the item was added to. |
+| `token` | `Token \| undefined` | The actor's active token, if any. |
+| `options` | `object` | The creation options passed to Foundry. |
+| `userId` | `string` | Id of the user who created the item (equals `game.user.id` here). |
+
+> **Bulk creation is filtered out.** When a whole actor is created, imported, or duplicated, its items are *not* treated as deliberate additions — the category only fires for items added to an already-existing actor. (The one remaining edge is re-importing data onto an existing actor, which can recreate its items without recreating the actor; guard inside your script if that matters.)
 
 ---
 

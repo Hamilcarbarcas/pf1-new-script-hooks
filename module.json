@@ -33,6 +33,7 @@
     "scripts/dialog-hooks.mjs",
     "scripts/script-calls.mjs",
     "scripts/combat-hooks.mjs",
-    "scripts/toggle-hooks.mjs"
+    "scripts/toggle-hooks.mjs",
+    "scripts/create-hooks.mjs"
   ]
 }
