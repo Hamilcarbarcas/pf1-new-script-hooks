@@ -1,4 +1,4 @@
-# PF1e New Script Hooks
+# PF1 New Script Hooks
 
 A Foundry VTT module for the PF1 system that adds new hook points and script call categories for item actions, combat turn events, and buff toggling.
 

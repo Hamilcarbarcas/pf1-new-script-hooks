@@ -1,9 +1,27 @@
 # Changelog
 
-## [1.2.0] - 2026-07-02
+## [1.1.0] - 2026-07-02
+
+### Changed
+- **Loaded as ES modules.** `module.json` now registers the scripts under `esmodules` instead of `scripts`. Each file runs in its own module scope rather than the shared global scope, matching how the PF1 system and other modern modules load.
 
 ### Added
-- **Create** script call category: runs once when an item is added to an actor (e.g. dropped from a compendium). Fires on the dropper's client via Foundry's native `createItem` hook, for actor-embedded items only. Scripts receive the standard `item`, `actor`, `token` variables plus the creation `options` and `userId`. Items that arrive as part of a whole actor being created, imported, or duplicated are filtered out.
+- **Turn Start (`turnStart`)** and **Turn End (`turnEnd`)** script call categories. Fire on the active combatant's items at the start/end of its combat turn, after PF1's own turn processing, on the actor's active-owning client. Only active items fire them. (New `combat-hooks.mjs`, wrapping `CombatPF._processTurnStart` / `_processEndTurn`.)
+- **Pre-Toggle (`preToggle`)** script call category for buffs. Fires before a buff's active state is written to the database — catching manual toggles, `setActive()`, and duration-based expiration. Set `shared.reject = true` to cancel the toggle before it commits. (New `toggle-hooks.mjs`, wrapping `ItemBuffPF._preUpdate`.)
+- **Create (`create`)** script call category. Fires once when an item is added to an existing actor (e.g. dropped from a compendium or the sidebar) via Foundry's native `createItem` hook, on the dropper's client. Scripts receive the standard `item`, `actor`, and `token` plus the creation `options` and `userId`. Items that arrive as part of a whole actor being created, imported, or duplicated are filtered out. (New `create-hooks.mjs`.)
+
+### Fixed
+- Script call category ordering on the item sheet: Pre-Activate and Pre-Use are pinned to the top, and Pre-Toggle is inserted immediately before the built-in Toggle category.
+
+## [1.0.2] - 2026-03-28
+
+### Changed
+- README updates.
+
+## [1.0.1] - 2026-03-28
+
+### Added
+- `shared.reject` and `shared.skipDialog` controls for the Pre-Activate / Pre-Use categories, letting scripts cancel an action or skip the attack dialog.
 
 ## [1.0.0] - 2026-02-28
 
