@@ -26,7 +26,20 @@ jobs:
              module.json > module.json.tmp && mv module.json.tmp module.json
 
       - name: Create zip
-        run: zip -r pf1-new-script-hooks.zip module.json scripts/ LICENSE README.md
+        run: zip -r pf1-new-script-hooks.zip module.json src/ LICENSE README.md
+
+      - name: Extract release notes from CHANGELOG
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          awk -v ver="$VERSION" '
+            index($0, "## [" ver "]") == 1 { flag=1; next }
+            index($0, "## [") == 1 { flag=0 }
+            flag { print }
+          ' CHANGELOG.md > RELEASE_BODY.md
+          if [ ! -s RELEASE_BODY.md ]; then
+            echo "::error::No CHANGELOG.md section found for version $VERSION"
+            exit 1
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -34,4 +47,4 @@ jobs:
           files: |
             pf1-new-script-hooks.zip
             module.json
-          generate_release_notes: true
+          body_path: RELEASE_BODY.md
