@@ -26,7 +26,7 @@ jobs:
              module.json > module.json.tmp && mv module.json.tmp module.json
 
       - name: Create zip
-        run: zip -r pf1-new-script-hooks.zip module.json src/ LICENSE README.md
+        run: zip -r pf1-new-script-hooks.zip module.json src/
 
       - name: Extract release notes from CHANGELOG
         run: |
