@@ -4,7 +4,7 @@
   "description": "<p>Adds additional hook points and script call categories for PF1 item actions. Provides pf1PreAttackDialog and pf1PostAttackDialog hooks, plus Pre-Activate, Pre-Use, Turn Start, and Turn End script call categories.</p>",
   "authors": [
     {
-      "name": "Patrick",
+      "name": "Hamilcarbarcas",
       "flags": {}
     }
   ],
