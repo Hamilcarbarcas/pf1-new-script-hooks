@@ -21,12 +21,12 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
           jq --arg version "$VERSION" \
-             --arg download "https://github.com/Hamilcarbarcas/pf1-new-script-hooks/releases/download/v${VERSION}/pf1-new-script-hooks.zip" \
+             --arg download "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/module.zip" \
              '.version = $version | .download = $download' \
              module.json > module.json.tmp && mv module.json.tmp module.json
 
       - name: Create zip
-        run: zip -r pf1-new-script-hooks.zip module.json src/
+        run: zip -r module.zip module.json src/
 
       - name: Extract release notes from CHANGELOG
         run: |
@@ -45,6 +45,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            pf1-new-script-hooks.zip
+            module.zip
             module.json
           body_path: RELEASE_BODY.md
