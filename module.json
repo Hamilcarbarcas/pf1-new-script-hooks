@@ -37,6 +37,7 @@
     "src/scripts/script-calls.mjs",
     "src/scripts/combat-hooks.mjs",
     "src/scripts/toggle-hooks.mjs",
-    "src/scripts/create-hooks.mjs"
+    "src/scripts/create-hooks.mjs",
+    "src/scripts/delete-hooks.mjs"
   ]
 }

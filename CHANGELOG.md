@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.0] - 2026-07-14
+
+### Added
+- **Delete (`delete`)** script call category. Fires once when an item is removed from an actor (e.g. deleted from the sheet) via Foundry's native `deleteItem` hook, on the deleting user's client. The mirror image of `create`. Scripts receive the standard `item`, `actor`, and `token` plus the deletion `options` and `userId`; the item is detached but fully readable, and the actor's item collection already reflects the removal. Items removed as part of a whole actor being deleted are filtered out. (New `delete-hooks.mjs`.)
+
 ## [1.1.0] - 2026-07-02
 
 ### Changed

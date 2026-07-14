@@ -116,6 +116,24 @@ Fires on the client of the user who created the item (the dropper). The item's f
 
 ---
 
+#### Delete (`delete`) — all item types
+Runs once when the item is removed from an actor — deleted from the sheet or removed programmatically. Uses Foundry's native `deleteItem` hook. World/compendium-directory items are ignored; only actor-embedded items fire it.
+
+Fires on the client of the user who deleted the item. The hook fires *after* removal: the deleted item's data (including its flags and script calls) is still fully readable, but it is no longer in the actor's item collection — so a script that recounts the actor's remaining items sees the post-removal state.
+
+**Directly available variables:**
+| Variable | Type | Description |
+|---|---|---|
+| `item` | `ItemPF` | The item that was removed (detached but fully readable). |
+| `actor` | `ActorPF` | The actor the item was removed from. |
+| `token` | `Token \| undefined` | The actor's active token, if any. |
+| `options` | `object` | The deletion options passed to Foundry. |
+| `userId` | `string` | Id of the user who deleted the item (equals `game.user.id` here). |
+
+> **Bulk deletion is filtered out.** When a whole actor is deleted, its items are *not* treated as deliberate removals — the category only fires for items removed from an actor that continues to exist.
+
+---
+
 ## Compatibility
 
 - **Minimum Foundry Version**: 13

@@ -91,6 +91,16 @@ Hooks.on("pf1RegisterScriptCalls", (registry) => {
   } catch (err) {
     console.warn(`${MODULE_ID} | Create script call category already registered.`);
   }
+
+  try {
+    registry.register(MODULE_ID, "delete", {
+      itemTypes: [...DEFAULT_ITEM_TYPES, "class", "race", "container"],
+      name: "Delete",
+      info: "Runs when the item is removed from an actor (e.g. deleted from the sheet).",
+    });
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Delete script call category already registered.`);
+  }
 });
 
 // ---- UI ordering wrapper ---- //
