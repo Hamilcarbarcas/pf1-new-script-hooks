@@ -1,7 +1,7 @@
 {
   "id": "pf1-new-script-hooks",
   "title": "PF1 New Script Hooks",
-  "description": "<p>Adds additional hook points and script call categories for PF1 item actions. Provides pf1PreAttackDialog and pf1PostAttackDialog hooks, plus Pre-Activate, Pre-Use, Turn Start, and Turn End script call categories.</p>",
+  "description": "<p>Adds additional hook points and script call categories for PF1 item actions. Provides pf1PreAttackDialog and pf1PostAttackDialog hooks, plus Pre-Activate, Pre-Use, Turn Start, Turn End, Pre-Toggle, Create, and Delete script call categories, and per-action Pre-Activate / Pre-Use / Use / Post-Use lists on the action sheet.</p>",
   "authors": [
     {
       "name": "Hamilcarbarcas",
@@ -35,6 +35,7 @@
   "esmodules": [
     "src/scripts/dialog-hooks.mjs",
     "src/scripts/script-calls.mjs",
+    "src/scripts/action-script-calls.mjs",
     "src/scripts/combat-hooks.mjs",
     "src/scripts/toggle-hooks.mjs",
     "src/scripts/create-hooks.mjs",

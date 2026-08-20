@@ -2,7 +2,7 @@
 
 A Foundry VTT module for the PF1 system that adds new hook points and script call categories for item actions, combat turn events, and buff toggling.
 
-**Version:** 1.1.0  
+**Version:** 1.3.0  
 **Foundry VTT Compatibility:** v13  
 **Manifest URL:** `https://github.com/Hamilcarbarcas/pf1-new-script-hooks/releases/latest/download/module.json`
 
@@ -20,6 +20,8 @@ Wraps `ActionUse.prototype.createAttackDialog` to fire two new hooks around the 
 
 Both hooks pass a `promises` array as the last argument. Async handlers can push a promise into this array and the wrapper will `await Promise.all(promises)` before continuing, ensuring all modifications complete before the form data is consumed. Synchronous handlers can simply ignore the extra argument.
 
+Both fire whether or not the dialog is actually shown. When it is skipped — shift-click, the *Skip action prompt* setting, or `skipDialog: true` — `pf1PostAttackDialog` receives an empty form object, and `alterRollData` fills in the defaults from `useOptions` as usual.
+
 ---
 
 ### Script Call Categories
@@ -27,7 +29,7 @@ Both hooks pass a `promises` array as the last argument. Async handlers can push
 All categories appear in the script calls list on item sheets for easy access.
 
 #### Pre-Activate (`preActivate`) — buff, feat, and all action item types
-Runs before the attack dialog opens. Use for setup logic that needs to happen before the user sees the dialog.
+Runs before the attack dialog opens. Use for setup logic that needs to happen before the user sees the dialog. Also runs when the dialog is skipped.
 
 **`shared` API:**
 | Flag | Effect |
@@ -40,7 +42,7 @@ Runs before the attack dialog opens. Use for setup logic that needs to happen be
 #### Pre-Use (`preUse`) — buff, feat, and all action item types
 Runs after the attack dialog closes and before roll calculations begin. Use to modify `formData` based on the user's dialog choices (e.g. injecting attack/damage bonuses, setting flags).
 
-`shared.formData` is populated with the dialog result before this fires.
+`shared.formData` is populated with the dialog result before this fires. When the dialog was skipped it runs at the same point with an empty `formData`, so scripts should treat any field they read from it as optional.
 
 **`shared` API:**
 | Flag | Effect |
@@ -131,6 +133,31 @@ Fires on the client of the user who deleted the item. The hook fires *after* rem
 | `userId` | `string` | Id of the user who deleted the item (equals `game.user.id` here). |
 
 > **Bulk deletion is filtered out.** When a whole actor is deleted, its items are *not* treated as deliberate removals — the category only fires for items removed from an actor that continues to exist.
+
+---
+
+### Action-Scoped Script Calls
+
+Every action sheet gets its own **Script Calls** section at the bottom of the **Misc** tab, repeating four of the categories above:
+
+| Category | Fires |
+|---|---|
+| Pre-Activate | Before the attack dialog opens |
+| Pre-Use | After the attack dialog closes, before roll calculations |
+| Use | After attacks are generated, before the chat card is posted |
+| Post-Use | After the chat card has been posted |
+
+Scripts placed here run **only when that action is used**. Item-level lists still fire for every action, so a script call written on the item and one written on an action both run when that action is used — the item-level list first, then the action's.
+
+`shared` behaves exactly as it does for the item-level lists: `shared.reject`, `shared.skipDialog`, `shared.hideChat` and so on all work the same, and both lists get the same `shared` object, so an item-level script can hand data to an action-scoped one. If an item-level script sets `shared.reject`, the action-scoped list is skipped.
+
+Scripts see the plain category (`preUse`, not the internal scoped id) in `shared.category`, plus `shared.actionScoped = true` while an action-scoped script is running.
+
+**Notes and limitations**
+
+- The **Use** and **Post-Use** categories are core PF1 categories, so an action-scoped list exists for them even though PF1 itself only offers them at item level.
+- Action-scoped scripts are stored on the parent item (in `system.scriptCalls`, under a synthetic `action:<actionId>:<category>` category) because PF1 actions have a closed schema with nowhere to put them. They are hidden from the item sheet's own Script Calls section, deleted along with the action, and copied when an action is duplicated.
+- Copying an *action* between items by hand (e.g. via the console) will not bring its scripts along; copying the whole item does.
 
 ---
 

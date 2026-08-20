@@ -8,7 +8,14 @@
  *
  * Also wraps ItemSheetPF._prepareScriptCalls to ensure Pre-Activate and
  * Pre-Use appear at the top of the script calls UI for clarity.
+ *
+ * The action-scoped copies of these two categories are chained here rather than
+ * registered as separate hook listeners: listeners on the same hook all push
+ * into `promises` and are awaited together, which would run them concurrently
+ * against one shared object. See action-script-calls.mjs.
  */
+
+import { runActionScriptCalls } from "./action-script-calls.mjs";
 
 (() => {
 "use strict";
@@ -127,6 +134,11 @@ Hooks.on("pf1PreAttackDialog", (actionUse, promises) => {
   shared.actionUse = actionUse;
   const p = actionUse.item
     .executeScriptCalls(CATEGORY_PRE_ACTIVATE, {}, shared)
+    // Action-scoped scripts run after the item-level ones, unless those cancelled
+    .then(() => {
+      if (shared.reject) return;
+      return runActionScriptCalls(actionUse.item, actionUse.action?.id, CATEGORY_PRE_ACTIVATE, shared);
+    })
     .catch((err) => console.error(`${MODULE_ID} | Pre-Activate script call execution failed:`, err));
   if (promises) promises.push(p);
 });
@@ -138,6 +150,10 @@ Hooks.on("pf1PostAttackDialog", (actionUse, formData, promises) => {
   if (formData) shared.formData = formData;
   const p = actionUse.item
     .executeScriptCalls(CATEGORY_PRE_USE, { formData }, shared)
+    .then(() => {
+      if (shared.reject) return;
+      return runActionScriptCalls(actionUse.item, actionUse.action?.id, CATEGORY_PRE_USE, shared, { formData });
+    })
     .catch((err) => console.error(`${MODULE_ID} | Pre-Use script call execution failed:`, err));
   if (promises) promises.push(p);
 });

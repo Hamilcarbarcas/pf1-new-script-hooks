@@ -9,6 +9,13 @@
  * These fire immediately before the attack dialog opens and immediately
  * after it closes (before alterRollData runs in ActionUse.process).
  *
+ * They also fire when the dialog is skipped entirely (shift-click, the
+ * "skip action prompt" setting, or `skipDialog: true`). ActionUse.process only
+ * calls createAttackDialog when its own skipDialog option is false, so a
+ * wrapper on ActionUse.process moves that skip onto `shared.skipDialog` — which
+ * this wrapper honors *after* the hooks have run. process() reads the option
+ * nowhere else, so nothing but the hook timing changes.
+ *
  * The `promises` array allows async handlers to push promises that will
  * be awaited before the wrapper continues, ensuring all modifications
  * complete before the form data is consumed by alterRollData or other modules.
@@ -42,8 +49,31 @@ Hooks.once("ready", () => {
     "MIXED"
   );
 
+  libWrapper.register(MODULE_ID, "pf1.actionUse.ActionUse.prototype.process", processWrapper, "WRAPPER");
+
   console.log(`${MODULE_ID} | Dialog hooks wrapper registered.`);
 });
+
+/**
+ * Ensure createAttackDialog is always reached, so the hooks fire even when the
+ * dialog itself is suppressed.
+ *
+ * @this {ActionUse}
+ * @param {Function} wrapped - Wrapped function
+ * @param {...*} args - Wrapped arguments
+ * @returns {Promise<*>} - Wrapped result
+ */
+async function processWrapper(wrapped, ...args) {
+  const options = args[0];
+  if (options?.skipDialog) {
+    // shared.skipDialog already carries the same value (ItemPF#use puts it
+    // there), but set it explicitly so any other caller behaves the same.
+    this.shared.skipDialog = true;
+    args[0] = { ...options, skipDialog: false };
+  }
+
+  return wrapped(...args);
+}
 
 async function createAttackDialogWrapper(wrapped, ...args) {
   const shared = this.shared;
@@ -63,24 +93,27 @@ async function createAttackDialogWrapper(wrapped, ...args) {
     return null;
   }
 
-  // Skip dialog: preActivate script set shared.skipDialog — continue with defaults
+  let form;
+
+  // Skip dialog: requested by the caller or by a preActivate script — continue
+  // with defaults, but still run the post hooks so preUse gets its turn.
   if (shared.skipDialog) {
-    console.log(`${MODULE_ID} | Attack dialog skipped by preActivate script call.`);
-    return {};
+    form = {};
+  }
+  // Normal path
+  else {
+    form = await wrapped(...args);
+    if (!form) return form; // Dialog closed/cancelled by the user
   }
 
-  const form = await wrapped(...args);
-
-  if (form) {
-    const postPromises = [];
-    try {
-      Hooks.callAll("pf1PostAttackDialog", this, form, postPromises);
-    } catch (err) {
-      console.error(`${MODULE_ID} | Error in pf1PostAttackDialog hook:`, err);
-    }
-    if (postPromises.length) {
-      await Promise.all(postPromises);
-    }
+  const postPromises = [];
+  try {
+    Hooks.callAll("pf1PostAttackDialog", this, form, postPromises);
+  } catch (err) {
+    console.error(`${MODULE_ID} | Error in pf1PostAttackDialog hook:`, err);
+  }
+  if (postPromises.length) {
+    await Promise.all(postPromises);
   }
 
   return form;
