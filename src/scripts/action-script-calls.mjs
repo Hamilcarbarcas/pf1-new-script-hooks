@@ -274,8 +274,20 @@ async function injectActionScriptCalls(app, html) {
   const $section = $(buildSection(item, action.id));
   $tab.append($section);
 
-  if (app.isEditable) $section.on("click", "a.item-control", (ev) => onScriptCallControl(ev, app));
-  else $section.find("a.item-control").remove();
+  // Right-click to open the editor / macro sheet, read-only sheets included
+  $section.on("contextmenu", ".item-list .item", (ev) => onScriptCallEdit(ev, app));
+
+  if (app.isEditable) {
+    $section.on("click", "a.item-control", (ev) => onScriptCallControl(ev, app));
+
+    // Macro drops. The action sheet's own DragDrop only covers the conditionals
+    // tab, so nothing has marked the Misc tab as a drop target — without a
+    // dragover that prevents default, the browser never fires `drop` here.
+    $section.on("dragover", ".item-list[data-category]", (ev) => ev.preventDefault());
+    $section.on("drop", ".item-list[data-category]", (ev) => onScriptCallDrop(ev, app));
+  } else {
+    $section.find("a.item-control").remove();
+  }
 }
 
 /**
@@ -395,6 +407,58 @@ async function onScriptCallControl(event, app) {
     await app._onSubmit(event, { preventRender: true });
     return script.update({ hidden: !script.hidden });
   }
+}
+
+/**
+ * Create a macro-type script call from a dropped macro, mirroring
+ * `ItemSheetPF._onScriptCallDrop`.
+ *
+ * @param {JQuery.Event} event - Drop event
+ * @param {ItemActionSheet} app - Action sheet
+ */
+async function onScriptCallDrop(event, app) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const eventData = getDragEventData(event.originalEvent ?? event);
+  if (!eventData) return;
+
+  const { uuid, type } = eventData;
+  if (type !== "Macro" || !uuid) return;
+
+  const category = event.currentTarget?.dataset.category;
+  if (!category) return;
+
+  await app._onSubmit(event, { preventRender: true }); // Save pending action edits first
+
+  return pf1.components.ItemScriptCall.create([{ type: "macro", value: uuid, category, name: "", img: "" }], {
+    parent: app.item,
+  });
+}
+
+/**
+ * Right-click a row to open its editor, mirroring `ItemSheetPF._onScriptCallEdit`.
+ *
+ * @param {JQuery.Event} event - Context menu event
+ * @param {ItemActionSheet} app - Action sheet
+ */
+function onScriptCallEdit(event, app) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const script = app.item.scriptCalls?.get(event.currentTarget?.dataset.itemId);
+  script?.edit({ editable: app.isEditable });
+}
+
+/**
+ * `TextEditor` is a deprecated global in v13; prefer the namespaced version.
+ *
+ * @param {DragEvent} event - Native drag event
+ * @returns {object|null} - Parsed drag data
+ */
+function getDragEventData(event) {
+  const cls = foundry.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor;
+  return cls?.getDragEventData(event) ?? null;
 }
 
 /**

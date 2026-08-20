@@ -147,6 +147,8 @@ Every action sheet gets its own **Script Calls** section at the bottom of the **
 | Use | After attacks are generated, before the chat card is posted |
 | Post-Use | After the chat card has been posted |
 
+The lists behave like the item sheet's: **+** creates a script, the pencil and a **right-click** on a row open the editor, the trash deletes, GMs get the hidden toggle, and **dragging a macro onto a category** adds it as a macro-type entry.
+
 Scripts placed here run **only when that action is used**. Item-level lists still fire for every action, so a script call written on the item and one written on an action both run when that action is used — the item-level list first, then the action's.
 
 `shared` behaves exactly as it does for the item-level lists: `shared.reject`, `shared.skipDialog`, `shared.hideChat` and so on all work the same, and both lists get the same `shared` object, so an item-level script can hand data to an action-scoped one. If an item-level script sets `shared.reject`, the action-scoped list is skipped.
