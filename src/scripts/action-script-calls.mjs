@@ -19,6 +19,8 @@
  * them — they show up only on the action that owns them.
  */
 
+import { collapseActionScriptCalls } from "./script-calls-collapse.mjs";
+
 const MODULE_ID = "pf1-new-script-hooks";
 
 /** Category prefix marking a script call as belonging to a single action. */
@@ -42,6 +44,11 @@ const ACTION_CATEGORIES = [
     info: "Runs after attacks are generated and before the chat card is posted, for this action only.",
   },
   {
+    id: "perUse",
+    name: "Per Use",
+    info: "Runs once per attack or use on the card, for this action only.",
+  },
+  {
     id: "postUse",
     name: "Post-Use",
     info: "Runs after the chat card has been posted, for this action only.",
@@ -49,6 +56,9 @@ const ACTION_CATEGORIES = [
 ];
 
 const CATEGORY_IDS = new Set(ACTION_CATEGORIES.map((c) => c.id));
+
+/** Fires once per row rather than once per use; see runPerUse. */
+const CATEGORY_PER_USE = "perUse";
 
 /* -------------------------------------------- */
 /*  Category helpers                            */
@@ -117,6 +127,14 @@ export async function runActionScriptCalls(item, actionId, category, shared = {}
 /*  Wrappers                                    */
 /* -------------------------------------------- */
 
+// Published at setup so a module resolving its own use loop — pf1-sequential-attacks
+// posts one card per attack and never reaches the `use` wrapper's row loop — can fire
+// Per Use itself. Optional on both sides: callers guard on the module being active.
+Hooks.once("setup", () => {
+  const mod = game.modules.get(MODULE_ID);
+  if (mod) mod.api = { ...(mod.api ?? {}), runPerUse, runActionScriptCalls };
+});
+
 Hooks.once("ready", () => {
   if (!game.modules.get("lib-wrapper")?.active) {
     console.warn(`${MODULE_ID} | libWrapper is required for action-scoped script calls. Feature disabled.`);
@@ -172,7 +190,65 @@ async function actionUseScriptCallsWrapper(wrapped, category = "use") {
   // ActionUse sets shared.scriptData = shared, so anything the scripts wrote
   // (reject, hideChat, ...) is already visible without reassigning it here.
 
+  // Per Use rides the `use` pass: by here the chat attacks exist, their effect
+  // notes and the card's footnotes are in, and the `use` scripts have had their
+  // say. Sequential mode never reaches this with rows built — it drives runPerUse
+  // itself, once per card — so the loop simply finds nothing and does not fire twice.
+  if (category === "use" && !shared?.reject) {
+    const rows = shared?.chatAttacks ?? [];
+    for (let i = 0; i < rows.length; i++) {
+      await runPerUse(this, { index: i, total: rows.length, chatAttack: rows[i] });
+      if (shared.reject) break;
+    }
+  }
+
   return result;
+}
+
+/* -------------------------------------------- */
+/*  Per Use                                     */
+/* -------------------------------------------- */
+
+/**
+ * Run the Per Use scripts for one attack or use on a card.
+ *
+ * Called once per row: by the `use` wrapper above for an ordinary card, and by
+ * pf1-sequential-attacks (through `game.modules.get(MODULE_ID).api.runPerUse`)
+ * for each card of a sequence.
+ *
+ * Unlike `use`, a throw here is logged and swallowed rather than aborting. This
+ * fires *during* resolution, N times, with rows already rolled — cancelling on
+ * the third of five would leave a half-resolved action. `shared.reject` is the
+ * deliberate way to stop, and it is honoured between rows.
+ *
+ * @param {ActionUse} actionUse - The in-flight use.
+ * @param {object} context - Row context.
+ * @param {number} [context.index=0] - 0-based row index.
+ * @param {number} [context.total=1] - Total rows in the whole use or sequence.
+ * @param {ChatAttack|null} [context.chatAttack] - The row this call is for.
+ * @param {boolean} [context.sequential=false] - Resolving one card at a time.
+ * @returns {Promise<void>}
+ */
+export async function runPerUse(actionUse, { index = 0, total = 1, chatAttack = null, sequential = false } = {}) {
+  const item = actionUse?.item;
+  const shared = actionUse?.shared;
+  if (!item || !shared) return;
+
+  const use = { index, total, chatAttack, sequential };
+  const priorCategory = shared.category;
+  shared.use = use;
+
+  try {
+    await item.executeScriptCalls(CATEGORY_PER_USE, { use }, shared);
+    if (!shared.reject) {
+      await runActionScriptCalls(item, actionUse.action?.id, CATEGORY_PER_USE, shared, { use });
+    }
+  } catch (err) {
+    console.error(`${MODULE_ID} | Per Use script call failed on use ${index + 1}/${total}:`, err, item);
+  } finally {
+    delete shared.use;
+    shared.category = priorCategory;
+  }
 }
 
 /**
@@ -249,10 +325,14 @@ async function actionControlWrapper(wrapped, event, ...args) {
 /*  Action sheet UI                             */
 /* -------------------------------------------- */
 
-Hooks.on("renderItemActionSheet", (app, html) => {
-  injectActionScriptCalls(app, html).catch((err) =>
-    console.error(`${MODULE_ID} | Failed to render action script calls:`, err)
-  );
+// Registered at ready so it runs after every other module's load-time render hook,
+// keeping the section below the Misc tab's other sections instead of among them.
+Hooks.once("ready", () => {
+  Hooks.on("renderItemActionSheet", (app, html) => {
+    injectActionScriptCalls(app, html).catch((err) =>
+      console.error(`${MODULE_ID} | Failed to render action script calls:`, err)
+    );
+  });
 });
 
 /**
@@ -288,6 +368,9 @@ async function injectActionScriptCalls(app, html) {
   } else {
     $section.find("a.item-control").remove();
   }
+
+  // Last, so the count the badge carries is of what actually survived above.
+  collapseActionScriptCalls(app, $section);
 }
 
 /**
@@ -358,11 +441,15 @@ function buildSection(item, actionId) {
     </ol>`;
   }).join("");
 
+  // The body wrapper is what the collapse kit shows and hides; the hint goes
+  // inside it, being no use while the section is shut.
   return `
   <div class="nsh-action-script-calls">
     <h3 class="form-header">${esc(game.i18n.localize("PF1.ScriptCalls.Name"))}</h3>
-    <p class="notes">Scripts here run only when this action is used, in addition to the item's own lists.</p>
-    ${lists}
+    <div class="nsh-collapse-body">
+      <p class="notes">Scripts here run only when this action is used, in addition to the item's own lists.</p>
+      ${lists}
+    </div>
   </div>`;
 }
 

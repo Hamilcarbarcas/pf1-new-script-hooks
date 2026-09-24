@@ -2,7 +2,7 @@
 
 A Foundry VTT module for the PF1 system that adds new hook points and script call categories for item actions, combat turn events, and buff toggling.
 
-**Version:** 1.3.0  
+**Version:** 1.5.0  
 **Foundry VTT Compatibility:** v13  
 **Manifest URL:** `https://github.com/Hamilcarbarcas/pf1-new-script-hooks/releases/latest/download/module.json`
 
@@ -51,6 +51,44 @@ Runs after the attack dialog closes and before roll calculations begin. Use to m
 | `shared.attackBonus.push(...)` | Adds a bonus to all attacks. |
 | `shared.firstAttackBonus.push(...)` | Adds a bonus to the first attack only (sequential attacks module). |
 | `shared.firstAttackDamageBonus.push(...)` | Adds a damage bonus to the first attack only (sequential attacks module). |
+
+---
+
+#### Per Use (`perUse`) — buff, feat, and all action item types
+Runs **once for every attack or use on the card**, rather than once per action. A full attack with four iteratives fires it four times; an action repeating itself without attack rolls fires it once per use. An action that resolves a single time fires it once, so a script written here works whatever the action turns out to do.
+
+It runs after the Use scripts, so the attacks are rolled, their damage and effect notes are in, and the card's footnotes are built — but nothing has been posted or spent yet.
+
+**Scope:** the usual `item`, `actor`, `token`, `shared`, `action`, plus `use`:
+
+| Field | Meaning |
+|---|---|
+| `use.index` | 0-based number of this attack or use. |
+| `use.total` | How many there are in the whole action (or the whole sequence). |
+| `use.chatAttack` | The `ChatAttack` this call is for — its rolls, damage and notes. |
+| `use.sequential` | `true` when pf1-sequential-attacks is resolving one card at a time. |
+
+`shared.targets` is refreshed per attack in sequential mode, so it holds the target *this* use is aimed at, not the one picked at the start. That is what makes per-projectile animation and per-target effects work:
+
+```js
+// One bolt per missile, at whatever that missile is aimed at.
+new Sequence()
+  .effect()
+    .file("jb2a.chain_lightning.primary.blue")
+    .atLocation(token)
+    .stretchTo(shared.targets[0])
+    .delay(use.sequential ? 0 : use.index * 250)
+  .play();
+```
+
+**`shared` API:**
+| Flag | Effect |
+|---|---|
+| `shared.reject = true` | Stops the action. Honoured between uses, so the remaining ones do not run. |
+
+**Errors are logged, not fatal.** Unlike Use, a throw here does not cancel the action. This category fires repeatedly *during* resolution with rolls already made, and aborting on the third of five would leave a half-resolved use; `shared.reject` is the deliberate way out.
+
+**Works with pf1-sequential-attacks**, which fires the category itself, once per card, through this module's API (`game.modules.get("pf1-new-script-hooks").api.runPerUse`). The count and the `use.index` sequence come out identical whether attacks resolve together or one at a time. Both sides are optional — neither module requires the other.
 
 ---
 
@@ -138,13 +176,14 @@ Fires on the client of the user who deleted the item. The hook fires *after* rem
 
 ### Action-Scoped Script Calls
 
-Every action sheet gets its own **Script Calls** section at the bottom of the **Misc** tab, repeating four of the categories above:
+Every action sheet gets its own **Script Calls** section at the bottom of the **Misc** tab, repeating five of the categories above:
 
 | Category | Fires |
 |---|---|
 | Pre-Activate | Before the attack dialog opens |
 | Pre-Use | After the attack dialog closes, before roll calculations |
 | Use | After attacks are generated, before the chat card is posted |
+| Per Use | Once for each attack or use on the card, after Use |
 | Post-Use | After the chat card has been posted |
 
 The lists behave like the item sheet's: **+** creates a script, the pencil and a **right-click** on a row open the editor, the trash deletes, GMs get the hidden toggle, and **dragging a macro onto a category** adds it as a macro-type entry.
@@ -157,9 +196,15 @@ Scripts see the plain category (`preUse`, not the internal scoped id) in `shared
 
 **Notes and limitations**
 
-- The **Use** and **Post-Use** categories are core PF1 categories, so an action-scoped list exists for them even though PF1 itself only offers them at item level.
+- The **Use** and **Post-Use** categories are core PF1 categories, so an action-scoped list exists for them even though PF1 itself only offers them at item level. **Per Use** is this module’s own, and its action-scoped list runs after the item-level one exactly as the others do — both once per attack.
 - Action-scoped scripts are stored on the parent item (in `system.scriptCalls`, under a synthetic `action:<actionId>:<category>` category) because PF1 actions have a closed schema with nowhere to put them. They are hidden from the item sheet's own Script Calls section, deleted along with the action, and copied when an action is duplicated.
 - Copying an *action* between items by hand (e.g. via the console) will not bring its scripts along; copying the whole item does.
+
+---
+
+### Collapsible Script Calls sections
+
+Both **Script Calls** sections — PF1's own on the item sheet's Advanced tab, and the action-scoped one on the action sheet's Misc tab — collapse by clicking their heading.
 
 ---
 
@@ -170,3 +215,4 @@ Scripts see the plain category (`preUse`, not the internal scoped id) in `shared
 - **Required Dependencies**:
   - **libWrapper** (https://github.com/ruipin/fvtt-lib-wrapper)
   - **Pathfinder 1e** system
+

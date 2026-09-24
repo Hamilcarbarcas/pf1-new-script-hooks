@@ -23,6 +23,7 @@ import { runActionScriptCalls } from "./action-script-calls.mjs";
 const MODULE_ID = "pf1-new-script-hooks";
 const CATEGORY_PRE_ACTIVATE = "preActivate";
 const CATEGORY_PRE_USE = "preUse";
+const CATEGORY_PER_USE = "perUse";
 
 const DEFAULT_ITEM_TYPES = [
   "attack",
@@ -57,6 +58,16 @@ Hooks.on("pf1RegisterScriptCalls", (registry) => {
     });
   } catch (err) {
     console.warn(`${MODULE_ID} | Pre-Use script call category already registered.`);
+  }
+
+  try {
+    registry.register(MODULE_ID, CATEGORY_PER_USE, {
+      itemTypes: DEFAULT_ITEM_TYPES,
+      name: "Per Use",
+      info: "Runs once for each attack or use on the card, after the Use scripts. `use` holds { index, total, chatAttack, sequential }.",
+    });
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Per Use script call category already registered.`);
   }
 
   try {
@@ -175,21 +186,28 @@ async function prepareScriptCallsWrapper(wrapped, ...args) {
     if (context.scriptCalls[key]) reordered[key] = context.scriptCalls[key];
   }
 
-  // Remaining in original order; inject preToggle immediately before toggle
+  // Remaining in original order; inject preToggle immediately before toggle, and
+  // perUse immediately before postUse — each belongs beside the category it splits.
   for (const key of originalOrder) {
     if (reordered[key]) continue;
-    if (key === "preToggle") continue; // placed just before toggle below
+    if (key === "preToggle" || key === CATEGORY_PER_USE) continue; // placed below
 
     if (key === "toggle" && context.scriptCalls["preToggle"]) {
       reordered["preToggle"] = context.scriptCalls["preToggle"];
+    }
+    if (key === "postUse" && context.scriptCalls[CATEGORY_PER_USE]) {
+      reordered[CATEGORY_PER_USE] = context.scriptCalls[CATEGORY_PER_USE];
     }
 
     reordered[key] = context.scriptCalls[key];
   }
 
-  // Fallback: if toggle never appeared, append preToggle at end
+  // Fallbacks: if the anchor category never appeared, append at the end
   if (!reordered["preToggle"] && context.scriptCalls["preToggle"]) {
     reordered["preToggle"] = context.scriptCalls["preToggle"];
+  }
+  if (!reordered[CATEGORY_PER_USE] && context.scriptCalls[CATEGORY_PER_USE]) {
+    reordered[CATEGORY_PER_USE] = context.scriptCalls[CATEGORY_PER_USE];
   }
 
   context.scriptCalls = reordered;
