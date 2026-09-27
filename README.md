@@ -22,6 +22,12 @@ Both hooks pass a `promises` array as the last argument. Async handlers can push
 
 Both fire whether or not the dialog is actually shown. When it is skipped — shift-click, the *Skip action prompt* setting, or `skipDialog: true` — `pf1PostAttackDialog` receives an empty form object, and `alterRollData` fills in the defaults from `useOptions` as usual.
 
+Between the two:
+
+- **`pf1AttackDialogResolved(actionUse, formData, promises)`** — Fires once the options are known, before `pf1PostAttackDialog`. Setting `actionUse.shared.reject = true` here cancels the action as if the dialog had been closed: Pre-Use does not run and nothing is spent.
+
+To resume a use whose options were chosen earlier, set **`actionUse.shared.resumeForm`** to the stored form before the dialog would open (for example from `pf1CreateActionUse`). Pre-Activate, the dialog and `pf1AttackDialogResolved` are skipped; `pf1PostAttackDialog` and Pre-Use run with a copy of that form.
+
 ---
 
 ### Script Call Categories

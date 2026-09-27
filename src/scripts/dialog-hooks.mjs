@@ -1,9 +1,10 @@
 /*
  * Dialog Hooks
  *
- * Wraps ActionUse.prototype.createAttackDialog to fire two custom hooks
+ * Wraps ActionUse.prototype.createAttackDialog to fire custom hooks
  * around the PF1 attack dialog:
  *  - pf1PreAttackDialog(actionUse, promises)
+ *  - pf1AttackDialogResolved(actionUse, formData, promises)
  *  - pf1PostAttackDialog(actionUse, formData, promises)
  *
  * These fire immediately before the attack dialog opens and immediately
@@ -29,6 +30,20 @@
  *  - shared.skipDialog = true  Skips the attack dialog but continues the action.
  *                              createAttackDialog returns an empty form object
  *                              and ActionUse.process() proceeds with defaults.
+ *
+ * Between the two, once the form is known:
+ *  - pf1AttackDialogResolved(actionUse, formData, promises)
+ *    Fires before pf1PostAttackDialog. Setting shared.reject here aborts the
+ *    action the same way the dialog's close button does: no Pre-Use, no charge
+ *    deduction, no card. A module that defers a use to a later point splits it
+ *    here, with the options chosen but nothing yet spent or rolled.
+ *
+ * Resuming a use whose options were chosen earlier:
+ *  - shared.resumeForm = {...}  Set before the dialog would open (e.g. from
+ *                              pf1CreateActionUse). Skips pf1PreAttackDialog,
+ *                              the dialog and pf1AttackDialogResolved, then
+ *                              fires pf1PostAttackDialog with a copy of the form.
+ *                              Pre-Activate does not run again; Pre-Use does.
  */
 
 (() => {
@@ -75,17 +90,29 @@ async function processWrapper(wrapped, ...args) {
   return wrapped(...args);
 }
 
-async function createAttackDialogWrapper(wrapped, ...args) {
-  const shared = this.shared;
-  const prePromises = [];
+/** Fire a hook with a promises array and await what its listeners pushed. */
+async function fireAwaited(hookName, ...args) {
+  const promises = [];
   try {
-    Hooks.callAll("pf1PreAttackDialog", this, prePromises);
+    Hooks.callAll(hookName, ...args, promises);
   } catch (err) {
-    console.error(`${MODULE_ID} | Error in pf1PreAttackDialog hook:`, err);
+    console.error(`${MODULE_ID} | Error in ${hookName} hook:`, err);
   }
-  if (prePromises.length) {
-    await Promise.all(prePromises);
+  if (promises.length) {
+    await Promise.all(promises);
   }
+}
+
+/**
+ * Show the dialog (or skip it) with the pre hook and the resolved hook around it.
+ *
+ * @this {ActionUse}
+ * @returns {Promise<object|null>} The form, or null when the action is cancelled.
+ */
+async function chooseForm(wrapped, args) {
+  const shared = this.shared;
+
+  await fireAwaited("pf1PreAttackDialog", this);
 
   // Cancel: preActivate script set shared.reject — abort without showing dialog
   if (shared.reject) {
@@ -106,15 +133,20 @@ async function createAttackDialogWrapper(wrapped, ...args) {
     if (!form) return form; // Dialog closed/cancelled by the user
   }
 
-  const postPromises = [];
-  try {
-    Hooks.callAll("pf1PostAttackDialog", this, form, postPromises);
-  } catch (err) {
-    console.error(`${MODULE_ID} | Error in pf1PostAttackDialog hook:`, err);
-  }
-  if (postPromises.length) {
-    await Promise.all(postPromises);
-  }
+  await fireAwaited("pf1AttackDialogResolved", this, form);
+  if (shared.reject) return null;
+
+  return form;
+}
+
+async function createAttackDialogWrapper(wrapped, ...args) {
+  // A resumed use already chose its options; Pre-Activate and the dialog are not repeated.
+  // Copied, because alterRollData fills defaults into the form it is given.
+  const resumed = this.shared.resumeForm;
+  const form = resumed ? foundry.utils.deepClone(resumed) : await chooseForm.call(this, wrapped, args);
+  if (!form) return form;
+
+  await fireAwaited("pf1PostAttackDialog", this, form);
 
   return form;
 }
