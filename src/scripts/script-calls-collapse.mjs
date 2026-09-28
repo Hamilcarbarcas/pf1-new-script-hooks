@@ -112,6 +112,8 @@ function collapseSection(app, root, { marker, key }) {
     // rather than a screen of it.
     configured: count > 0,
     badge: count,
+    // The fixed point the other modules' sections sort beneath.
+    sortKey: false,
   });
 }
 
