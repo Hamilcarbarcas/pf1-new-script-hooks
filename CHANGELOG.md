@@ -11,6 +11,9 @@
 - **`shared.resumeForm`** — resume a use whose options were chosen earlier. Set it before the dialog would open (from `pf1CreateActionUse`) and the wrapper skips `pf1PreAttackDialog`, the dialog and `pf1AttackDialogResolved`, then fires `pf1PostAttackDialog` with a copy of the stored form. Pre-Activate does not run a second time; Pre-Use does. The form is copied because `alterRollData` fills defaults into whatever it is given.
 
 ### Fixed
+- **Adding or changing an entry in a sheet section no longer jumps the sheet back to the top of
+  the tab.** Sections from the shared sheet kit now restore the scroll position once they have
+  drawn.
 - **The action sheet's Script Calls section now sits at the bottom of the Misc tab** instead of landing among other modules' sections, where it split astora-mod's Target Filter from the targeting controls that go with it. Before, its render hook was registered at load time, so its position followed module load order. It is now registered at `ready`, which puts it after every load-time hook. Sections that place themselves asynchronously, such as astora-mod's Buff Delivery, still land below it.
 
 ## [1.5.0] - 2026-09-21
